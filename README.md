@@ -180,16 +180,16 @@ Measures risk-adjusted return while only penalizing downside volatility.
 ================================================
 [XAUUSD] WEEKLY PPO TRAINING
 ================================================
-Trades:      151
-Weekly PnL:  3834.50 pips
-Winrate:     54.97%
-Mean Win:    65.67 pips
-Mean Loss:   -23.76 pips
-Max DD:      210.00 pips
-PF:          3.37
-R Profit:    41.68
-Sharpe:      0.381
-Sortino:     1.068
+Trades:          89
+Weekly PnL:      818.87 pips
+Winrate:         56.18%
+Mean Win:        329.72 pips
+Mean Loss:       -86.77 pips
+Max DD:          1.37R
+PF:              4.87
+Weekly R profit: 37.22
+Sharpe:          0.48
+Sortino:         1.70
 ================================================
 ```
 
