@@ -1116,16 +1116,16 @@ def train_bot(df, symbol="XAUUSD"):
                 print("================================================")
                 print(f"[{symbol}] WEEKLY PPO TRAINING")
                 print("================================================")
-                print(f"Trades:      {len(trade_returns)}")
-                print(f"Weekly PnL:  {weekly_pnl:.2f} pips")
-                print(f"Winrate:     {winrate*100:.2f}%")
-                print(f"Mean Win:    {mean_win:.2f} pips")
-                print(f"Mean Loss:   {mean_loss:.2f} pips")
-                print(f"Max DD:      {max_dd:.2f} pips")
-                print(f"PF:          {profit_factor:.2f}")
-                print(f"R profit:    {R_pnl:.2f}")
-                print(f"Sharpe:      {sharpe:.2f}")
-                print(f"Sortino:     {sortino:.2f}")
+                print(f"Trades:          {len(trade_returns)}")
+                print(f"Weekly PnL:      {weekly_pnl/4:.2f} pips")
+                print(f"Winrate:         {winrate*100:.2f}%")
+                print(f"Mean Win:        {mean_win*4:.2f} pips")
+                print(f"Mean Loss:       {mean_loss*4:.2f} pips")
+                print(f"Max DD:          {max_dd/(SL_PIPS*4):.2f}R")
+                print(f"PF:              {profit_factor:.2f}")
+                print(f"Weekly R profit: {R_pnl:.2f}")
+                print(f"Sharpe:          {sharpe:.2f}")
+                print(f"Sortino:         {sortino:.2f}")
                 print("================================================")
                 print()
 
@@ -1551,7 +1551,9 @@ def test_bot(symbol="XAUUSD"):
                         f"[{symbol}] PPO HOLD"
                     )
 
-        time.sleep(10)
+        now = datetime.now()
+        sleep_seconds = 60 - now.second - now.microsecond / 1_000_000
+        time.sleep(sleep_seconds)
 
 def main():
 
