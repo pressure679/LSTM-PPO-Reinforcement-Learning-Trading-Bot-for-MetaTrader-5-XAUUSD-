@@ -1532,6 +1532,19 @@ def test_bot(symbol="XAUUSD"):
 
     while True:
 
+        now = datetime.now()
+
+        seconds_until_next_5m = (
+            (5 - now.minte % 5) * 60
+            - now.second
+            - now.microsecond / 1_000_000
+        )
+
+        if seconds_until_next_5m <= 0:
+            seconds_until_next_5m += 300
+
+        time.sleep(seconds_until_next_5m)
+
         tick = mt5.symbol_info_tick(symbol)
         # SL_PIPS = round(tick.bid * 0.00125 * 10, 0)
         SL_PIPS = 50
@@ -1707,19 +1720,6 @@ def test_bot(symbol="XAUUSD"):
                 #     print(
                 #         f"[{symbol}] PPO HOLD"
                 #     )
-
-        now = datetime.now()
-
-        seconds_until_next_5m = (
-            (5 - now.minte % 5) * 60
-            - now.second
-            - now.microsecond / 1_000_000
-        )
-
-        if seconds_until_next_5m <= 0:
-            seconds_until_next_5m += 300
-
-        time.sleep(seconds_until_next_5m)
 
 def main():
     train_bot("XAUUSD")
