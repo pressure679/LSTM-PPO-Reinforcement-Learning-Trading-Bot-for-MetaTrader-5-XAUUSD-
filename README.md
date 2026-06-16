@@ -99,7 +99,7 @@ Position sizing example:
 
 ```python
 risk_per_position = min(
-    max(round(balance * RISK / 500 / 4, 2), 0.01),
+    max(round(balance * RISK / 500, 2), 0.01),
     100.0
 )
 ```
@@ -180,16 +180,16 @@ Measures risk-adjusted return while only penalizing downside volatility.
 ================================================
 [XAUUSD] WEEKLY PPO TRAINING
 ================================================
-Trades:          89
-Weekly PnL:      818.87 pips
-Winrate:         56.18%
-Mean Win:        329.72 pips
-Mean Loss:       -86.77 pips
-Max DD:          1.37R
-PF:              4.87
-Weekly R profit: 37.22
-Sharpe:          0.48
-Sortino:         1.70
+Trades:          172
+Weekly PnL:      880 pips
+Winrate:         91.86%
+Mean Win:        10 pips
+Mean Loss:       -50 pips
+Max DD:          2.00R
+PF:              2.26
+Weekly R PnL:    17.60R
+Sharpe:          0.31
+Sortino:         0.10
 ================================================
 ```
 
