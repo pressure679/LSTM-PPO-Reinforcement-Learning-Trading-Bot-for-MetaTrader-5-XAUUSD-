@@ -151,21 +151,31 @@ def Indecision(df, threshold=0.2):
 
     return (body / candle_range < threshold).astype(int)
 
-def EQH(df, lookback=36, tolerance=1):
-    highs = df["High"]
+def EQH(df, tolerance=1):
+    swing_high = (
+        (df["High"] > df["High"].shift(1)) &
+        (df["High"] > df["High"].shift(-1))
+    )
 
-    return highs.rolling(lookback).apply(
-        lambda x: int((abs(x[-1] - x[:-1]) <= tolerance).any()),
-        raw=True
-    ).fillna(0).astype(int)
+    prev_swing_high = df["High"].where(swing_high).ffill().shift(1)
 
-def EQL(df, lookback=36, tolerance=1):
-    lows = df["Low"]
+    return (
+        swing_high &
+        (abs(df["High"] - prev_swing_high) <= tolerance)
+    ).astype(int)
 
-    return lows.rolling(lookback).apply(
-        lambda x: int((abs(x[-1] - x[:-1]) <= tolerance).any()),
-        raw=True
-    ).fillna(0).astype(int)
+def EQL(df, tolerance=1):
+    swing_low = (
+        (df["Low"] < df["Low"].shift(1)) &
+        (df["Low"] < df["Low"].shift(-1))
+    )
+
+    prev_swing_low = df["Low"].where(swing_low).ffill().shift(1)
+
+    return (
+        swing_low &
+        (abs(df["Low"] - prev_swing_low) <= tolerance)
+    ).astype(int)
 
 def RejectionBlock(df, wick_ratio=2.0):
     body = (df["Close"] - df["Open"]).abs()
