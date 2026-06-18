@@ -35,7 +35,7 @@ ACTIONS = ['hold', 'long', 'short', 'close']
 
 # capital = 800
 
-def load_last_mb_xauusd(file_path="C:\\Users\\Vittus Mikiassen\\Desktop\\XAU_5m_data.csv", mb=15, delimiter=';', col_names=None):
+def load_last_mb_xauusd(file_path="C:\\Users\\Vittus Mikiassen\\Desktop\\XAU_5m_data.csv", mb=3, delimiter=';', col_names=None):
     file_size = os.path.getsize(file_path)
     offset = max(file_size - mb * 1024 * 1024, 0)  # start position
     
@@ -145,12 +145,6 @@ def STOCH(df, period=14, smooth_d=3):
 def EMA(df, period):
     return df['Close'].ewm(span=period, adjust=False).mean().round(2)
 
-def Indecision(df, threshold=0.2):
-    body = (df["Close"] - df["Open"]).abs()
-    candle_range = (df["High"] - df["Low"]).replace(0, 1e-9)
-
-    return (body / candle_range < threshold).astype(int)
-
 def EQH(df, tolerance=1):
     swing_high = (
         (df["High"] > df["High"].shift(1)) &
@@ -176,6 +170,12 @@ def EQL(df, tolerance=1):
         swing_low &
         (abs(df["Low"] - prev_swing_low) <= tolerance)
     ).astype(int)
+
+def Indecision(df, threshold=0.2):
+    body = (df["Close"] - df["Open"]).abs()
+    candle_range = (df["High"] - df["Low"]).replace(0, 1e-9)
+
+    return (body / candle_range < threshold).astype(int)
 
 def RejectionBlock(df, wick_ratio=2.0):
     body = (df["Close"] - df["Open"]).abs()
@@ -244,6 +244,74 @@ def BearishMB(df, multiplier=1.5):
     return ((df["Low"] <= ob_high) &
             (df["High"] >= ob_low)).astype(int)
 
+def AsiaHighDist(df):
+    # Asia session: 23:00-06:59 GMT
+    asia = (df.index.hour >= 2) | (df.index.hour < 9)
+
+    # Trading day starts at 23:00
+    trade_day = (df.index - pd.Timedelta(hours=23)).date
+
+    asia_high = (
+        df["High"]
+        .where(asia)
+        .groupby(trade_day)
+        .transform("max")
+        .ffill()
+    )
+
+    return asia_high - df["Close"]
+
+def AsiaLowDist(df):
+    asia = (df.index.hour >= 2) | (df.index.hour < 9)
+
+    trade_day = (df.index - pd.Timedelta(hours=23)).date
+
+    asia_low = (
+        df["Low"]
+        .where(asia)
+        .groupby(trade_day)
+        .transform("min")
+        .ffill()
+    )
+
+    return asia_low - df["Close"]
+
+def BuyScore(df):
+
+    return (
+        (df["EMA7"] > df["EMA21"]).astype(int) * 2 +
+        (df["EMA_DIFF"] > 0).astype(int) * 1 +
+        (df["+di"] > df["-di"]).astype(int) * 2 +
+        (df["adx"] > 20).astype(int) * 1 +
+        (df["k"] > df["k_smooth"]).astype(int) * 1 +
+        df["bullish_ob"] * 2 +
+        df["bullish_mb"] * 1 +
+        df["bullish_fvg"] * 1 +
+        df["eql"] * 1 +
+        df["rb"] * 1 -
+        df["bearish_ob"] * 2 -
+        df["bearish_fvg"] * 1 -
+        df["eqh"] * 1
+    )
+
+def SellScore(df):
+
+    return (
+        (df["EMA7"] < df["EMA21"]).astype(int) * 2 +
+        (df["EMA_DIFF"] < 0).astype(int) * 1 +
+        (df["-di"] > df["+di"]).astype(int) * 2 +
+        (df["adx"] > 20).astype(int) * 1 +
+        (df["k"] < df["k_smooth"]).astype(int) * 1 +
+        df["bearish_ob"] * 2 +
+        df["bearish_mb"] * 1 +
+        df["bearish_fvg"] * 1 +
+        df["eqh"] * 1 +
+        df["rb"] * 1 -
+        df["bullish_ob"] * 2 -
+        df["bullish_fvg"] * 1 -
+        df["eql"] * 1
+    )
+
 def add_indicators(df):
     df['adx'], df['+di'], df['-di'] = ADX(df)
 
@@ -268,8 +336,16 @@ def add_indicators(df):
     df["bearish_mb"] = BearishMB(df)
     df["bullish_mb"] = BullishMB(df)
 
+    df["sell_score"] = SellScore(df)
+    df["buy_score"] = BuyScore(df)
+
+    df["asia_high_dist"] = AsiaHighDist(df)
+    df["asia_low_dist"] = AsiaLowDist(df)
+
     df = df[["Open", "High", "Low", "Close", "k", "k_smooth", "adx", "+di", "-di", "EMA7", "EMA21", "EMA_DIFF",
-            "indecision", "rb", "bullish_ob", "bearish_ob", "bullish_fvg", "bearish_fvg", "eqh", "eql", "bearish_mb", "bullish_mb"]].copy()
+            "indecision", "rb", "bullish_ob", "bearish_ob", "bullish_fvg", "bearish_fvg", "eqh", "eql", "bearish_mb", "bullish_mb",
+            "sell_score", "buy_score",
+            "asia_high_dist", "asia_low_dist"]].copy()
     # df = df[["Open", "High", "Low", "Close", "EMA_crossover", "macd_zone", "macd_line", "macd_signal", "macd_line_diff", "macd_signal_diff", "macd_line_slope", "macd_signal_line_slope" , "macd_osma", "macd_crossover", "bb_sma", "bb_upper", "bb_lower", "RSI_zone", "ADX_zone", "+DI_val", "-DI_val", "ATR", "order_block_type"]].copy()
 
     df.dropna(inplace=True)
@@ -865,7 +941,11 @@ def train_bot(symbol="XAUUSD"):
         "eqh",
         "eql",
         "bearish_mb",
-        "bullish_mb"
+        "bullish_mb",
+        "sell_score",
+        "buy_score",
+        "asia_high_dist",
+        "asia_low_dist"
     ]
 
     agent = LSTMPPOAgent(
@@ -917,7 +997,7 @@ def train_bot(symbol="XAUUSD"):
     trade_returns = []
 
     # STANDARD_SL_PIPS = 100
-    RR_RATIO = 0.2
+    RR_RATIO = 0.26
     # SPREAD_AND_COMMISSION = 1.2
 
     # SL_PIPS = 50
@@ -1574,7 +1654,7 @@ def test_bot(symbol="XAUUSD"):
     #     print(mt5.last_error())
     #     return
     balance = account.balance
-    RISK = 0.005
+    RISK = 0.02
     # risk_per_position = max(balance * RISK / 500 / 4, 0.01)
 
     # tick = mt5.symbol_info_tick(symbol)
@@ -1609,7 +1689,11 @@ def test_bot(symbol="XAUUSD"):
         "eqh",
         "eql",
         "bearish_mb",
-        "bullish_mb"
+        "bullish_mb",
+        "sell_score",
+        "buy_score",
+        "asia_high_dist",
+        "asia_low_dist"
     ]
 
     # last_m15 = None
