@@ -7,20 +7,9 @@ import random
 from collections import deque
 from datetime import datetime, timedelta
 import subprocess
-# import requests
-# import threading
-# from multiprocessing import Process
 import time
-# from time import timezone
-# from decimal import Decimal
-# from pybit.unified_trading import HTTP
-# from pybit.unified_trading import WebSocket
-# from sklearn.neighbors import NearestNeighbors
-# from sklearn.metrics.pairwise import cosine_similarity
-# from concurrent.futures import ThreadPoolExecutor, as_completed
-# import subprocess
-# import glob
-# import shutil
+import argparse
+import  threading
 import MetaTrader5 as mt5
 import torch
 import torch.nn as nn
@@ -253,12 +242,12 @@ def BearishMB(df, multiplier=1.5):
     return ((df["Low"] <= ob_high) &
             (df["High"] >= ob_low)).astype(int)
 
-def AsiaHighDist(df):
+def AsiaHigh(df):
     # Asia session: 23:00-06:59 GMT
-    asia = (df.index.hour >= 2) | (df.index.hour < 9)
+    asia = (df.index.hour >= 1) | (df.index.hour < 9)
 
     # Trading day starts at 23:00
-    trade_day = (df.index - pd.Timedelta(hours=23)).date
+    trade_day = (df.index - pd.Timedelta(hours=24)).date
 
     asia_high = (
         df["High"]
@@ -268,12 +257,12 @@ def AsiaHighDist(df):
         .ffill()
     )
 
-    return asia_high - df["Close"]
+    return asia_high
 
-def AsiaLowDist(df):
-    asia = (df.index.hour >= 2) | (df.index.hour < 9)
+def AsiaLow(df):
+    asia = (df.index.hour >= 1) | (df.index.hour < 9)
 
-    trade_day = (df.index - pd.Timedelta(hours=23)).date
+    trade_day = (df.index - pd.Timedelta(hours=24)).date
 
     asia_low = (
         df["Low"]
@@ -283,7 +272,7 @@ def AsiaLowDist(df):
         .ffill()
     )
 
-    return asia_low - df["Close"]
+    return asia_low
 
 def VWAP(df, atr_period=14, atr_multiplier=1.0):
 
@@ -338,7 +327,7 @@ def VWAP(df, atr_period=14, atr_multiplier=1.0):
     # --------------------------------------------------
     # Derived features
     # --------------------------------------------------
-    dist = df["Close"] - vwap
+    # dist = df["Close"] - vwap
 
     above = (df["Close"] > vwap).astype(int)
     below = (df["Close"] < vwap).astype(int)
@@ -352,7 +341,7 @@ def VWAP(df, atr_period=14, atr_multiplier=1.0):
         vwap,
         upper,
         lower,
-        dist,
+        # dist,
         above,
         below,
         above_upper,
@@ -449,22 +438,22 @@ def add_indicators(df):
 
     df["bullish_rb"], df["bearish_rb"] = RejectionBlocks(df)
 
-    df["vwap"], df["vwap_upper"], df["vwap_lower"], df["vwap_dist"], df["above_vwap"], df["below_vwap"], df["vwap_above_upper"], df["vwap_below_lower"], df["vwap_slope"] = VWAP(df)
+    df["vwap"], df["vwap_upper"], df["vwap_lower"], df["above_vwap"], df["below_vwap"], df["vwap_above_upper"], df["vwap_below_lower"], df["vwap_slope"] = VWAP(df)
 
     df["sell_score"] = SellScore(df)
     df["buy_score"] = BuyScore(df)
 
     df["volume_ma"] = VolumeMA(df)
 
-    # df["asia_high_dist"] = AsiaHighDist(df)
-    # df["asia_low_dist"] = AsiaLowDist(df)
+    df["asia_high"] = AsiaHigh(df)
+    df["asia_low"] = AsiaLow(df)
 
     df = df[["Open", "High", "Low", "Close",
-    "k", "k_smooth", "adx", "+di", "-di", "EMA7", "EMA21", "EMA_DIFF",
+            "k", "k_smooth", "adx", "+di", "-di", "EMA7", "EMA21", "EMA_DIFF",
             "indecision", "bullish_ob", "bearish_ob", "bullish_fvg", "bearish_fvg", "eqh", "eql", "bearish_mb", "bullish_mb", "bullish_rb", "bearish_rb",
-            "vwap", "vwap_upper", "vwap_lower", "vwap_dist", "above_vwap", "below_vwap", "vwap_above_upper", "vwap_below_lower", "vwap_slope",
+            "vwap", "vwap_upper", "vwap_lower", "above_vwap", "below_vwap", "vwap_above_upper", "vwap_below_lower", "vwap_slope",
             "volume_ma",
-            # "asia_high_dist", "asia_low_dist",
+            "asia_high", "asia_low",
             "sell_score", "buy_score"]].copy()
     # df = df[["Open", "High", "Low", "Close", "EMA_crossover", "macd_zone", "macd_line", "macd_signal", "macd_line_diff", "macd_signal_diff", "macd_line_slope", "macd_signal_line_slope" , "macd_osma", "macd_crossover", "bb_sma", "bb_upper", "bb_lower", "RSI_zone", "ADX_zone", "+DI_val", "-DI_val", "ATR", "order_block_type"]].copy()
 
@@ -1072,8 +1061,8 @@ def train_bot(symbol="XAUUSD"):
         "vwap_below_lower",
         "vwap_slope",
         "volume_ma",
-        # "asia_high_dist",
-        # "asia_low_dist",
+        "asia_high",
+        "asia_low",
         "sell_score",
         "buy_score"
     ]
@@ -1198,8 +1187,8 @@ def train_bot(symbol="XAUUSD"):
         # ==============================================================
 
         # if action == 1 and not in_position and df["+di"].iloc[i] > df["-di"].iloc[i] and df["EMA_DIFF"].iloc[i] > 0 and df["k"].iloc[i] < 80:
-        # if action == 1 and not in_position and df["EMA7"].iloc[i] > df["EMA21"].iloc[i] and df["k"].iloc[i] < 80:
-        if action == 1:
+        if action == 1 and not in_position and df["EMA7"].iloc[i] > df["EMA21"].iloc[i] and df["k"].iloc[i] < 80:
+        # if action == 1:
             in_position = True
             position_type = "long"
 
@@ -1241,8 +1230,8 @@ def train_bot(symbol="XAUUSD"):
 
         # elif action == 2 and not in_position and df["-di"].iloc[i] > df["+di"].iloc[i] and df["EMA_DIFF"].iloc[i] < 0 and df["k"].iloc[i] > 20:
         # elif action == 2 and not in_position and df["buy_score"].iloc[i] < df["sell_score"].iloc[i]:
-        # elif action == 2 and not in_position and df["EMA7"].iloc[i] < df["EMA21"].iloc[i] and df["k"].iloc[i] > 20:
-        elif action == 2:
+        elif action == 2 and not in_position and df["EMA7"].iloc[i] < df["EMA21"].iloc[i] and df["k"].iloc[i] > 20:
+        # elif action == 2:
             in_position = True
             position_type = "short"
 
@@ -1352,10 +1341,10 @@ def train_bot(symbol="XAUUSD"):
                     )
 
                     # realized_reward += (
-                    # reward += (
-                    #     # remaining_pips * (position_size / 0.25) - SPREAD_AND_COMMISSION * (position_size / 0.25)
-                    #     remaining_pips - SPREAD_AND_COMMISSION * (position_size / 0.25)
-                    # )
+                    reward += (
+                        # remaining_pips * (position_size / 0.25) - SPREAD_AND_COMMISSION * (position_size / 0.25)
+                        remaining_pips - SPREAD_AND_COMMISSION
+                    )
                     pnl += (
                         remaining_pips * (position_size) - SPREAD_AND_COMMISSION * (position_size)
                         # remaining_pips - SPREAD_AND_COMMISSION * (position_size / 0.25)
@@ -1457,9 +1446,9 @@ def train_bot(symbol="XAUUSD"):
                     )
 
                     # realized_reward += (
-                    # reward += (
-                    #     remaining_pips - SPREAD_AND_COMMISSION * (position_size / 0.25)
-                    # )
+                    reward += (
+                        remaining_pips - SPREAD_AND_COMMISSION
+                    )
                     pnl += (
                         remaining_pips * (position_size) - SPREAD_AND_COMMISSION * (position_size)
                     )
@@ -1833,8 +1822,8 @@ def test_bot(symbol="XAUUSD"):
         "vwap_below_lower",
         "vwap_slope",
         "volume_ma",
-        # "asia_high_dist",
-        # "asia_low_dist",
+        "asia_high",
+        "asia_low",
         "sell_score",
         "buy_score"
     ]
@@ -1849,8 +1838,11 @@ def test_bot(symbol="XAUUSD"):
     )
 
     # agent.model.debug = True
-
-    agent.loadcheckpoint("XAUUSD")
+    try:
+        agent.loadcheckpoint("XAUUSD")
+    except:
+        print("No file for prior training, cancelling test.")
+        return
 
     # ==========================================================
     # INITIAL LOAD
@@ -1860,7 +1852,7 @@ def test_bot(symbol="XAUUSD"):
         symbol,
         mt5.TIMEFRAME_M5,
         0,
-        200
+        300
     )
 
     # rates_m1 = mt5.copy_rates_from_pos(
@@ -1996,7 +1988,7 @@ def test_bot(symbol="XAUUSD"):
                 )
 
                 # raw_df = raw_df.tail(200).reset_index(drop=True)
-                raw_df = raw_df.tail(200)
+                raw_df = raw_df.tail(300)
 
                 # print("Before indicators:", len(df))
                 # df = add_indicators(raw_df.copy())
@@ -2056,7 +2048,7 @@ def test_bot(symbol="XAUUSD"):
             if df["adx"].iloc[-1] < 20:
                 action = 0
 
-            print(f"action: {action}")
+            print(f"Test action: {action}")
 
             # ==================================================
             # OPEN NEW TRADE
@@ -2075,7 +2067,8 @@ def test_bot(symbol="XAUUSD"):
 
                 # if action == 1 and df["adx"].iloc[-1] > 20 and df["+di"].iloc[-1] > df["-di"].iloc[-1] and df["EMA_DIFF"].iloc[-1] > 0 and df["k"].iloc[-1] < 80:
                 # if action == 1 and df["buy_score"].iloc[-1] > df["sell_score"].iloc[-1]:
-                if action == 1:
+                if action == 1 and df["EMA7"].iloc[-1] > df["EMA21"].iloc[-1] and df["k"].iloc[-1] < 80:
+                # if action == 1:
                     # print(
                     #     f"[{symbol}] PPO BUY"
                     # )
@@ -2087,7 +2080,8 @@ def test_bot(symbol="XAUUSD"):
 
                 # elif action == 2 and df["adx"].iloc[-1] > 20 and df["-di"].iloc[-1] > df["+di"].iloc[-1] and df["EMA_DIFF"].iloc[-1] < 0 and df["k"].iloc[-1] > 20:
                 # elif action == 2 and df["buy_score"].iloc[-1] < df["sell_score"].iloc[-1]:
-                elif action == 2:
+                elif action == 2 and df["EMA7"].iloc[-1] < df["EMA21"].iloc[-1] and df["k"].iloc[-1] > 20:
+                # elif action == 2:
                     # print(
                     #     f"[{symbol}] PPO SELL"
                     # )
@@ -2284,9 +2278,36 @@ def update_xauusd_data():
     )
 
 def main():
-    # update_xauusd_data()
-    train_bot("XAUUSD")
-    
-    # test_bot(symbol="XAUUSD-VIP")
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--train", action="store_true")
+    parser.add_argument("--test", action="store_true")
+    parser.add_argument("--symbol", default="XAUUSD-VIP")
+
+    args = parser.parse_args()
+
+    threads = []
+
+    if args.train:
+        t = threading.Thread(
+            target=train_bot,
+            # args=(args.symbol),
+            daemon=True
+        )
+        t.start()
+        threads.append(t)
+
+    if args.test:
+        t = threading.Thread(
+            target=test_bot,
+            args=(args.symbol,),
+            daemon=True
+        )
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
 
 main()
