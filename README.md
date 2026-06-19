@@ -6,6 +6,8 @@ The bot combines an LSTM neural network for sequence learning with Proximal Poli
 
 Unlike traditional bots that rely on fixed rules, the PPO agent learns when to Buy, Sell or Hold from thousands of market examples.
 
+The program should be in a folder or the desktop where the 5m csv file with OHLC data from https://www.kaggle.com/datasets/novandraanugrah/xauusd-gold-price-historical-data-2004-2024 is, in training it will then make a LSTM-PPO-saves folder where the training is saved (used for making decisions, also in testing).
+
 ---
 
 ## Features
