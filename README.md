@@ -1,216 +1,155 @@
-# XAUUSD LSTM + PPO Trading Bot
+# MT5 XAUUSD LSTM PPO Trading Bot
 
-## Overview
+A MetaTrader 5 reinforcement learning trading bot for XAUUSD (Gold).
 
-This project is an automated trading system for XAUUSD (Gold) that combines a Long Short-Term Memory (LSTM) neural network with a Proximal Policy Optimization (PPO) reinforcement learning agent.
+The bot combines an LSTM neural network for sequence learning with Proximal Policy Optimization (PPO) to learn trading decisions directly from historical market data.
 
-The system is trained on historical 15-minute XAUUSD OHLC data and learns to make trading decisions based on market structure, technical indicators, and recent price action.
-
-The bot can be trained on historical data and deployed for live trading through MetaTrader 5 using the Python MetaTrader5 library.
+Unlike traditional bots that rely on fixed rules, the PPO agent learns when to Buy, Sell or Hold from thousands of market examples.
 
 ---
 
 ## Features
 
-* LSTM-based market state representation
-* PPO reinforcement learning agent
-* Automated trade execution through MetaTrader 5
-* Dynamic risk management
-* Partial take-profit system
-* Training performance reporting
-* Walk-forward evaluation support
+### Reinforcement Learning
+
+- LSTM policy network
+- PPO training
+- Continuous online training
+- Live inference on MT5
+- Automatic checkpoint saving/loading
+
+### Technical Indicators
+
+- EMA 7
+- EMA 21
+- EMA Difference (Momentum)
+- ADX
+- +DI
+- -DI
+- Stochastic
+- VWAP
+- VWAP Bands
+- VWAP Slope
+- Volume Moving Average
+
+### Smart Money Concepts
+
+- Bullish Order Blocks
+- Bearish Order Blocks
+- Bullish Fair Value Gaps
+- Bearish Fair Value Gaps
+- Bullish Rejection Blocks
+- Bearish Rejection Blocks
+- Equal Highs
+- Equal Lows
+- Market Breaks
+- Indecision Candles
+
+### PPO State Features
+
+Current state contains:
+
+- OHLC
+- EMA trend
+- Momentum
+- ADX trend strength
+- DI Direction
+- Stochastic
+- VWAP
+- VWAP Bands
+- VWAP Position
+- VWAP Slope
+- Volume MA
+- Order Blocks
+- Fair Value Gaps
+- Rejection Blocks
+- Equal Highs/Lows
+- Buy Score
+- Sell Score
 
 ---
 
-## Data
+## Current Strategy
 
-Training data consists of:
+Current reward structure:
 
-* XAUUSD (Gold)
-* 5-minute timeframe
-* OHLC candles
-* Historical dataset obtained from Kaggle - https://www.kaggle.com/datasets/novandraanugrah/xauusd-gold-price-historical-data-2004-2024
+- Take Profit: 20 pips
+- Stop Loss: 40 pips
+- Risk/Reward: 1 : 0.5
 
-The dataset is used to train the LSTM and PPO models on 5-1 year worth of data to identify profitable trading opportunities.
-
----
-
-## Technical Indicators
-
-The model uses the following indicators as features:
-
-### EMA 7
-
-Fast Exponential Moving Average used to detect short-term trend direction.
-
-### EMA 21
-
-Slower Exponential Moving Average used to identify broader trend structure.
-
-### ADX (Average Directional Index)
-
-Measures trend strength and helps distinguish trending markets from ranging markets.
-
-### Stochastic Oscillator
-
-Used to identify momentum shifts and overbought/oversold conditions.
+The current focus is high-probability momentum trades rather than large swing trades.
 
 ---
 
-## Model Architecture
+## Training
 
-### LSTM Network
+The PPO agent trains continuously over historical MT5 data.
 
-The LSTM processes recent market data sequences and generates feature representations for the PPO agent.
+Example metrics during training:
 
-Input features include:
+- Win rate: 70–85%
+- Profit Factor: 1.5–3+
+- Weekly performance: typically 10–30R during training (varies by market conditions)
 
-* OHLC data
-* EMA 7
-* EMA 21
-* ADX
-* Stochastic Oscillator
-
-The LSTM learns temporal relationships in price movement and indicator behavior.
-
-### PPO Agent
-
-The PPO agent receives observations from the environment and decides:
-
-* Buy
-* Sell
-* Hold
-
-The agent learns through reward optimization based on trade outcomes.
-
----
-
-## Risk Management
-
-The bot uses:
-
-* Percentage-based stop losses derived from current market price
-* Dynamic position sizing
-* Four partial take-profit targets
-* Maximum lot size limits
-* Minimum lot size enforcement
-
-Position sizing example:
-
-```python
-risk_per_position = min(
-    max(round(balance * RISK / 500, 2), 0.01),
-    100.0
-)
-```
-
----
-
-## Live Trading
-
-Live trading is performed using the MetaTrader5 Python package.
-
-The bot:
-
-1. Connects to MetaTrader 5
-2. Retrieves live market prices
-3. Generates predictions
-4. Places orders automatically
-5. Manages open positions
-
-Supported broker symbols may vary depending on the broker configuration.
-
----
-
-## Training Statistics
-
-During training, the bot reports detailed performance metrics:
-
-### Trades
-
-Total number of completed trades.
-
-### Weekly PnL
-
-Profit and loss measured in pips.
-
-### Win Rate
-
-Percentage of winning trades.
-
-### Mean Win
-
-Average profit per winning trade.
-
-### Mean Loss
-
-Average loss per losing trade.
-
-### Profit Factor (PF)
-
-Calculated as:
-
-PF = Gross Profit / Gross Loss
-
-Measures overall profitability.
-
-### Maximum Drawdown (Max DD)
-
-Largest equity decline during the evaluation period.
-
-### R Profit
-
-Risk-adjusted profit measured in units of R.
-
-R Profit normalizes performance relative to stop-loss risk and position scaling.
-
-### Sharpe Ratio
-
-Measures risk-adjusted return using standard deviation.
-
-### Sortino Ratio
-
-Measures risk-adjusted return while only penalizing downside volatility.
-
----
-
-## Example Training Output
-
-```text
-================================================
-[XAUUSD] WEEKLY PPO TRAINING
-================================================
-Trades:          172
-Weekly PnL:      880 pips
-Winrate:         91.86%
-Mean Win:        10 pips
-Mean Loss:       -50 pips
-Max DD:          2.00R
-PF:              2.26
-Weekly R PnL:    17.60R
-Sharpe:          0.31
-Sortino:         0.10
-================================================
-```
+These figures are training statistics only and are not guarantees of future performance.
 
 ---
 
 ## Requirements
 
-Python packages used include:
+- Python 3.11+
+- MetaTrader 5
+- MetaTrader5
+- pandas
+- numpy
+- torch
 
-* pandas
-* numpy
-* MetaTrader5
+Install dependencies:
 
-Additional packages may be required depending on the training configuration.
+```bash
+pip install MetaTrader5 pandas numpy torch
+```
+
+---
+
+## Running
+
+Train:
+
+```bash
+python mt5-xau-lstm-ppo-stoch-adx-bot.py --train
+```
+
+Live trading:
+
+```bash
+python mt5-xau-lstm-ppo-stoch-adx-bot.py --test
+```
+
+Train and trade simultaneously:
+
+```bash
+python mt5-xau-lstm-ppo-stoch-adx-bot.py --train --test
+```
+
+---
+
+## Project Goals
+
+Current work focuses on:
+
+- Improving PPO policy learning
+- Better feature engineering
+- Dynamic trade management
+- VWAP and volume analysis
+- Smart Money Concept detection
+- MFE/MAE prediction research
+- Higher timeframe context
 
 ---
 
 ## Disclaimer
 
-This software is provided for research and educational purposes.
+This project is for educational and research purposes only.
 
-Trading financial markets involves substantial risk and may result in losses. Past performance does not guarantee future results.
-
-Always test thoroughly on historical and demo accounts before using real capital.
+Trading leveraged products involves substantial risk. Always test thoroughly on historical data and demo accounts before risking real capital.
