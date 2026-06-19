@@ -61,7 +61,7 @@ def load_last_mb_xauusd(file_path="C:\\Users\\Vittus Mikiassen\\Desktop\\XAU_5m_
         df[col] = pd.to_numeric(df[col], errors='coerce')
     df['Date'] = pd.to_datetime(df['Date'])
     df.set_index('Date', inplace=True)
-    df = df[['Open', 'High', 'Low', 'Close']].copy()
+    df = df[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
 
     # df = df.resample('15min').agg({
     #     'Open': 'first',
@@ -285,6 +285,97 @@ def AsiaLowDist(df):
 
     return asia_low - df["Close"]
 
+def VWAP(df, atr_period=14, atr_multiplier=1.0):
+
+    # print(type(df.index))
+    # print(df.index.dtype)
+    # print(df.index[:5])
+
+    # --------------------------------------------------
+    # Select volume column
+    # --------------------------------------------------
+    if "Volume" in df.columns:
+        volume = df["Volume"]
+    elif "tick_volume" in df.columns:
+        volume = df["tick_volume"]
+    elif "real_volume" in df.columns:
+        volume = df["real_volume"]
+    else:
+        raise ValueError("No volume column found.")
+
+    # --------------------------------------------------
+    # ATR (internal only)
+    # --------------------------------------------------
+    prev_close = df["Close"].shift(1)
+
+    tr = pd.concat([
+        df["High"] - df["Low"],
+        (df["High"] - prev_close).abs(),
+        (df["Low"] - prev_close).abs()
+    ], axis=1).max(axis=1)
+
+    atr = tr.rolling(atr_period).mean()
+
+    # --------------------------------------------------
+    # VWAP
+    # --------------------------------------------------
+    typical_price = (
+        df["High"] +
+        df["Low"] +
+        df["Close"]
+    ) / 3
+
+    session = df.index.normalize()
+
+    cum_tpv = (typical_price * volume).groupby(session).cumsum()
+    cum_volume = volume.groupby(session).cumsum()
+
+    vwap = round(cum_tpv / cum_volume, 2)
+
+    upper = round(vwap + atr * atr_multiplier, 2)
+    lower = round(vwap - atr * atr_multiplier, 2)
+
+    # --------------------------------------------------
+    # Derived features
+    # --------------------------------------------------
+    dist = df["Close"] - vwap
+
+    above = (df["Close"] > vwap).astype(int)
+    below = (df["Close"] < vwap).astype(int)
+
+    above_upper = (df["Close"] > upper).astype(int)
+    below_lower = (df["Close"] < lower).astype(int)
+
+    slope = vwap.diff()
+
+    return (
+        vwap,
+        upper,
+        lower,
+        dist,
+        above,
+        below,
+        above_upper,
+        below_lower,
+        slope
+    )
+
+def VolumeMA(df, period=14):
+
+    # -----------------------------------------
+    # Select volume column
+    # -----------------------------------------
+    if "Volume" in df.columns:
+        volume = df["Volume"]
+    elif "tick_volume" in df.columns:
+        volume = df["tick_volume"]
+    elif "real_volume" in df.columns:
+        volume = df["real_volume"]
+    else:
+        raise ValueError("No volume column found.")
+
+    return round(volume.rolling(period).mean(), 2)
+
 def BuyScore(df):
 
     return (
@@ -297,7 +388,11 @@ def BuyScore(df):
         df["bullish_mb"] * 1 +
         df["bullish_fvg"] * 1 +
         df["eql"] * 1 +
-        df["bullish_rb"] * 1 -
+        df["bullish_rb"] * 1 +
+        df["above_vwap"] * 1 +
+        df["vwap_above_upper"] * 1 -
+        df["below_vwap"] * 1 -
+        df["vwap_below_lower"] * 1 -
         df["bearish_rb"] * 1 -
         df["bearish_ob"] * 2 -
         df["bearish_fvg"] * 1 -
@@ -317,6 +412,10 @@ def SellScore(df):
         df["bearish_mb"] * 1 +
         df["bearish_fvg"] * 1 +
         df["eqh"] * 1 +
+        df["below_vwap"] * 1 +
+        df["vwap_below_lower"] * 1 -
+        df["above_vwap"] * 1 -
+        df["vwap_above_upper"] * 1 -
         df["bearish_rb"] * 1 -
         df["bullish_rb"] * 1 -
         df["bullish_ob"] * 2 -
@@ -350,14 +449,22 @@ def add_indicators(df):
 
     df["bullish_rb"], df["bearish_rb"] = RejectionBlocks(df)
 
+    df["vwap"], df["vwap_upper"], df["vwap_lower"], df["vwap_dist"], df["above_vwap"], df["below_vwap"], df["vwap_above_upper"], df["vwap_below_lower"], df["vwap_slope"] = VWAP(df)
+
     df["sell_score"] = SellScore(df)
     df["buy_score"] = BuyScore(df)
+
+    df["volume_ma"] = VolumeMA(df)
 
     # df["asia_high_dist"] = AsiaHighDist(df)
     # df["asia_low_dist"] = AsiaLowDist(df)
 
-    df = df[["Open", "High", "Low", "Close", "k", "k_smooth", "adx", "+di", "-di", "EMA7", "EMA21", "EMA_DIFF",
+    df = df[["Open", "High", "Low", "Close",
+    "k", "k_smooth", "adx", "+di", "-di", "EMA7", "EMA21", "EMA_DIFF",
             "indecision", "bullish_ob", "bearish_ob", "bullish_fvg", "bearish_fvg", "eqh", "eql", "bearish_mb", "bullish_mb", "bullish_rb", "bearish_rb",
+            "vwap", "vwap_upper", "vwap_lower", "vwap_dist", "above_vwap", "below_vwap", "vwap_above_upper", "vwap_below_lower", "vwap_slope",
+            "volume_ma",
+            # "asia_high_dist", "asia_low_dist",
             "sell_score", "buy_score"]].copy()
     # df = df[["Open", "High", "Low", "Close", "EMA_crossover", "macd_zone", "macd_line", "macd_signal", "macd_line_diff", "macd_signal_diff", "macd_line_slope", "macd_signal_line_slope" , "macd_osma", "macd_crossover", "bb_sma", "bb_upper", "bb_lower", "RSI_zone", "ADX_zone", "+DI_val", "-DI_val", "ATR", "order_block_type"]].copy()
 
@@ -956,10 +1063,19 @@ def train_bot(symbol="XAUUSD"):
         "bullish_mb",
         "bullish_rb",
         "bearish_rb",
+        "vwap",
+        "vwap_upper",
+        "vwap_lower",
+        "above_vwap",
+        "below_vwap",
+        "vwap_above_upper",
+        "vwap_below_lower",
+        "vwap_slope",
+        "volume_ma",
+        # "asia_high_dist",
+        # "asia_low_dist",
         "sell_score",
         "buy_score"
-        # "asia_high_dist",
-        # "asia_low_dist"
     ]
 
     agent = LSTMPPOAgent(
@@ -1011,10 +1127,10 @@ def train_bot(symbol="XAUUSD"):
     trade_returns = []
 
     # STANDARD_SL_PIPS = 100
-    RR_RATIO = 0.375
+    RR_RATIO = 0.5
     # SPREAD_AND_COMMISSION = 1.2
 
-    # SL_PIPS = 50
+    SL_PIPS = 40
 
     # TP1_PIPS = 50
     # TP2_PIPS = 100
@@ -1040,7 +1156,6 @@ def train_bot(symbol="XAUUSD"):
         high = current["High"]
         low = current["Low"]
         # SL_PIPS = round(current_price * 0.00125 * 10, 0)
-        SL_PIPS = 40
         TP1_PIPS = round(SL_PIPS * RR_RATIO, 0)
         # TP2_PIPS = round(SL_PIPS * 2, 0)
         # TP3_PIPS = round(SL_PIPS * 3, 0)
@@ -1083,7 +1198,8 @@ def train_bot(symbol="XAUUSD"):
         # ==============================================================
 
         # if action == 1 and not in_position and df["+di"].iloc[i] > df["-di"].iloc[i] and df["EMA_DIFF"].iloc[i] > 0 and df["k"].iloc[i] < 80:
-        if action == 1 and not in_position:
+        # if action == 1 and not in_position and df["EMA7"].iloc[i] > df["EMA21"].iloc[i] and df["k"].iloc[i] < 80:
+        if action == 1:
             in_position = True
             position_type = "long"
 
@@ -1124,7 +1240,9 @@ def train_bot(symbol="XAUUSD"):
         # ==============================================================
 
         # elif action == 2 and not in_position and df["-di"].iloc[i] > df["+di"].iloc[i] and df["EMA_DIFF"].iloc[i] < 0 and df["k"].iloc[i] > 20:
-        elif action == 2 and not in_position:
+        # elif action == 2 and not in_position and df["buy_score"].iloc[i] < df["sell_score"].iloc[i]:
+        # elif action == 2 and not in_position and df["EMA7"].iloc[i] < df["EMA21"].iloc[i] and df["k"].iloc[i] > 20:
+        elif action == 2:
             in_position = True
             position_type = "short"
 
@@ -1497,7 +1615,7 @@ def train_bot(symbol="XAUUSD"):
 
     agent.savecheckpoint(symbol)
 
-    # knn._fit()
+    knn._fit()
 
     # knn.save()
 
@@ -1513,7 +1631,7 @@ def open_long(symbol, lot_size):
 
     sl = entry - 4
 
-    tp1 = entry + 1.5
+    tp1 = entry + 2
     # tp2 = entry + 10
     # tp3 = entry + 15
     # tp4 = entry + 20
@@ -1549,7 +1667,7 @@ def open_short(symbol, lot_size):
 
     sl = entry + 4
 
-    tp1 = entry - 1.5
+    tp1 = entry - 2
     # tp2 = entry - 10
     # tp3 = entry - 15
     # tp4 = entry - 20
@@ -1706,10 +1824,19 @@ def test_bot(symbol="XAUUSD"):
         "bullish_mb",
         "bullish_rb",
         "bearish_rb",
+        "vwap",
+        "vwap_upper",
+        "vwap_lower",
+        "above_vwap",
+        "below_vwap",
+        "vwap_above_upper",
+        "vwap_below_lower",
+        "vwap_slope",
+        "volume_ma",
+        # "asia_high_dist",
+        # "asia_low_dist",
         "sell_score",
         "buy_score"
-        # "asia_high_dist",
-        # "asia_low_dist"
     ]
 
     # last_m15 = None
@@ -1846,23 +1973,26 @@ def test_bot(symbol="XAUUSD"):
                 'time': 'Date'
             }, inplace=True)
 
+            new_row["Date"] = pd.to_datetime(new_row["Date"], unit="s")
+            new_row.set_index("Date", inplace=True)
+
             if new_row.index[-1] != df.index[-1]:
 
-                df = pd.concat(
-                    [df, new_row],
-                    ignore_index=True
-                )
+                # df = pd.concat(
+                #     [df, new_row]
+                #     # ignore_index=True
+                # )
 
-                df.set_index("Date", inplace=True)
+                # df.set_index("Date", inplace=True)
 
-                df = (
-                    df.tail(200)
-                    # .reset_index(drop=True)
-                )
+                # df = (
+                #     df.tail(200)
+                #     # .reset_index(drop=True)
+                # )
 
                 raw_df = pd.concat(
-                    [raw_df, new_row],
-                    ignore_index=True
+                    [raw_df, new_row]
+                    # ignore_index=True
                 )
 
                 # raw_df = raw_df.tail(200).reset_index(drop=True)
@@ -1870,6 +2000,8 @@ def test_bot(symbol="XAUUSD"):
 
                 # print("Before indicators:", len(df))
                 # df = add_indicators(raw_df.copy())
+                # print(type(raw_df.index))
+                # print(raw_df.index[:5])
                 df = add_indicators(raw_df.copy())
                 # print("After indicators:", len(df))
                 # print(df.tail())
@@ -1924,7 +2056,7 @@ def test_bot(symbol="XAUUSD"):
             if df["adx"].iloc[-1] < 20:
                 action = 0
 
-            # print(f"action: {action}")
+            print(f"action: {action}")
 
             # ==================================================
             # OPEN NEW TRADE
@@ -1942,6 +2074,7 @@ def test_bot(symbol="XAUUSD"):
                 # )
 
                 # if action == 1 and df["adx"].iloc[-1] > 20 and df["+di"].iloc[-1] > df["-di"].iloc[-1] and df["EMA_DIFF"].iloc[-1] > 0 and df["k"].iloc[-1] < 80:
+                # if action == 1 and df["buy_score"].iloc[-1] > df["sell_score"].iloc[-1]:
                 if action == 1:
                     # print(
                     #     f"[{symbol}] PPO BUY"
@@ -1953,6 +2086,7 @@ def test_bot(symbol="XAUUSD"):
                     )
 
                 # elif action == 2 and df["adx"].iloc[-1] > 20 and df["-di"].iloc[-1] > df["+di"].iloc[-1] and df["EMA_DIFF"].iloc[-1] < 0 and df["k"].iloc[-1] > 20:
+                # elif action == 2 and df["buy_score"].iloc[-1] < df["sell_score"].iloc[-1]:
                 elif action == 2:
                     # print(
                     #     f"[{symbol}] PPO SELL"
@@ -2151,8 +2285,8 @@ def update_xauusd_data():
 
 def main():
     # update_xauusd_data()
-    # train_bot("XAUUSD")
+    train_bot("XAUUSD")
     
-    test_bot(symbol="XAUUSD-VIP")
+    # test_bot(symbol="XAUUSD-VIP")
 
 main()
