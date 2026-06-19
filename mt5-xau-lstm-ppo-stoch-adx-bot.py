@@ -1615,7 +1615,7 @@ def train_bot(symbol="XAUUSD"):
 
     agent.savecheckpoint(symbol)
 
-    knn._fit()
+    # knn._fit()
 
     # knn.save()
 
