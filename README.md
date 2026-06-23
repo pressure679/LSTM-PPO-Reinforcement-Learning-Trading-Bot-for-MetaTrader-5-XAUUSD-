@@ -160,21 +160,7 @@ Train and trade simultaneously:
 python mt5-xau-lstm-ppo-bot.py --train --test
 ```
 
----
-
 To train download a m5 xauusd csv file form kaggle or dukascopy and place the folder in "download" relative to the directory the mt5-xau-lstm-ppo-bot.py is in.
-
-## Project Goals
-
-Current work focuses on:
-
-- Improving PPO policy learning
-- Better feature engineering
-- Dynamic trade management
-- VWAP and volume analysis
-- Smart Money Concept detection
-- MFE/MAE prediction research
-- Higher timeframe context
 
 ---
 
