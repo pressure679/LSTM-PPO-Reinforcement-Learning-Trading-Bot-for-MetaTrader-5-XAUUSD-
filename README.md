@@ -145,13 +145,13 @@ pip install MetaTrader5 pandas numpy torch
 Train:
 
 ```bash
-python mt5-xau-lstm-ppo-bot.py --train
+python bot.py --train
 ```
 
 Live trading:
 
 ```bash
-python mt5-xau-lstm-ppo-bot.py --test
+python bot.py --test --symbol "XAUUSD"
 ```
 
 Train and trade simultaneously:
