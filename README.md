@@ -1,12 +1,8 @@
-# MT5 XAUUSD LSTM PPO Trading Bot
+# xLSTM PPO Reinforcement Learning Trading Bot for MetaTrader 5 (XAUUSD)
 
-A MetaTrader 5 reinforcement learning trading bot for XAUUSD (Gold).
+An AI-powered trading bot that combines **Extended LSTM (xLSTM)** and **Proximal Policy Optimization (PPO)** to learn profitable trading strategies on XAUUSD.
 
-The bot combines an LSTM neural network for sequence learning with Proximal Policy Optimization (PPO) to learn trading decisions directly from historical market data.
-
-Unlike traditional bots that rely on fixed rules, the PPO agent learns when to Buy, Sell or Hold from thousands of market examples.
-
-The program should be in a folder or the desktop where the 5m csv file with OHLC data downloaded from dukascopy, 3 years. is, in training it will then make a LSTM-PPO-saves folder where the training is saved (used for making decisions, also in testing).
+Unlike traditional indicator-based Expert Advisors, this project learns directly from historical market data using reinforcement learning while incorporating Smart Money Concepts (SMC), technical indicators, market structure, and adaptive risk management.
 
 ---
 
@@ -14,112 +10,138 @@ The program should be in a folder or the desktop where the 5m csv file with OHLC
 
 ### Reinforcement Learning
 
-- LSTM policy network
-- PPO training
-- Continuous online training
-- Live inference on MT5
-- Automatic checkpoint saving/loading
+- xLSTM policy network
+- Proximal Policy Optimization (PPO)
+- Sequence-based learning
+- Reinforcement learning trading environment
+- Reward shaping
+- GPU/CPU training support
 
-### Technical Indicators
+---
+
+## Smart Money Concepts (SMC)
+
+The bot automatically detects:
+
+- Order Blocks (OB)
+- Mitigated Order Blocks
+- Breaker Blocks
+- Market Blocks (MB)
+- Rejection Blocks (RB)
+- Fair Value Gaps (FVG)
+- Inverse Fair Value Gaps (IFVG)
+- FVG Retracements
+- Equal Highs (EQH)
+- Equal Lows (EQL)
+- Market Structure Shifts (MSS)
+- Swing Highs
+- Swing Lows
+- Previous Day High (PDH)
+- Previous Day Low (PDL)
+- Asia High
+- Asia Low
+- Trend Lines
+- Liquidity Sweeps
+
+---
+
+## Technical Indicators
+
+Included features include:
 
 - EMA 7
 - EMA 21
-- EMA Difference (Momentum)
+- EMA Difference
+- EMA Slopes
 - ADX
 - +DI
 - -DI
-- Stochastic
+- Stochastic Oscillator
 - VWAP
-- VWAP Bands
-- VWAP Slope
+- VWAP Upper Band
+- VWAP Lower Band
 - Volume Moving Average
-
-### Smart Money Concepts
-
-- Bullish Order Blocks
-- Bearish Order Blocks
-- Bullish Fair Value Gaps
-- Bearish Fair Value Gaps
-- Bullish Rejection Blocks
-- Bearish Rejection Blocks
-- Equal Highs
-- Equal Lows
-- Market Breaks
+- Session Detection
 - Indecision Candles
 
-### PPO State Features
+---
 
-Current state contains:
+## Adaptive Trade Management
 
-- OHLC
-- EMA trend
+The bot automatically manages:
+
+- Adaptive Stop Loss
+- Adaptive Take Profit
+- Partial Profit Taking
+- Break-even Movement
+- Dynamic Position Sizing
+- Risk-based Lot Calculation
+
+---
+
+## Machine Learning Features
+
+The model learns from more than 50 engineered features including:
+
+- Smart Money Concepts
+- Trend
 - Momentum
-- ADX trend strength
-- DI Direction
-- Stochastic
-- VWAP
-- VWAP Bands
-- VWAP Position
-- VWAP Slope
-- Volume MA
-- Order Blocks
-- Fair Value Gaps
-- Rejection Blocks
-- Equal Highs/Lows
-- Buy Score
-- Sell Score
+- Liquidity
+- Session information
+- Price distances
+- Volume
+- Volatility
+- Historical sequences
 
 ---
 
-## Current Strategy
+## Trading Environment
 
-Current reward structure:
+The custom Gymnasium environment supports:
 
-- Take Profit: 20 pips
-- Stop Loss: 40 pips
-- Risk/Reward: 1 : 0.5
+- Buy
+- Sell
+- Hold
 
-The current focus is high-probability momentum trades rather than large swing trades.
+Rewards consider:
+
+- Profit
+- Drawdown
+- Risk
+- Trade quality
+- Spread
+- Commission
 
 ---
 
-## Training
+## Project Structure
 
-The PPO agent trains continuously over historical MT5 data.
+```
+.
+├── bot.py                  # Main application
+├── download/               # Historical CSV data
+├── models/                 # Saved models
+├── logs/                   # Training logs
+├── scaler.pkl              # Feature scaler
+└── README.md
+```
 
-Example metrics during training:
+---
 
-- Win rate: 70–85%
-- Profit Factor: 1.5–3+
-- Weekly performance: typically 10–30R during training (varies by market conditions)
+## Installation
 
-These figures are training statistics only and are not guarantees of future performance.
+Clone the repository
 
-### Quarterly stats
+```bash
+git clone https://github.com/pressure679/LSTM-PPO-Reinforcement-Learning-Trading-Bot-for-MetaTrader-5-XAUUSD-
+cd LSTM-PPO-Reinforcement-Learning-Trading-Bot-for-MetaTrader-5-XAUUSD-
+```
 
-## Weekly PPO Training Performance by Quarter
+Install dependencies
 
-Training period: **~June 2024 – June 1, 2026** (102 rolling weekly training windows)
-
-| Period | Approx. Dates          | Avg Weekly R | Avg PF | Avg Max DD | Avg Recovery Factor |
-| ------ | ---------------------- | -----------: | -----: | ---------: | ------------------: |
-| Q1     | Jun 2024 – Sep 2024    |        6.20R |   1.10 |      8.80R |                2.04 |
-| Q2     | Sep 2024 – Dec 2024    |        7.39R |   1.12 |      9.80R |                2.25 |
-| Q3     | Dec 2024 – Mar 2025    |       16.89R |   1.25 |      8.14R |                5.42 |
-| Q4     | Mar 2025 – Jun 2025    |       43.73R |   1.29 |     10.81R |                9.20 |
-| Q5     | Jun 2025 – Sep 2025    |       36.54R |   1.38 |      8.94R |                8.72 |
-| Q6     | Sep 2025 – Dec 2025    |       75.07R |   1.38 |      8.62R |               19.42 |
-| Q7     | Dec 2025 – Mar 2026    |      164.37R |   1.82 |      7.23R |               54.69 |
-| Q8*    | Mar 2026 – Jun 1, 2026 |      126.55R |   1.49 |      8.76R |               34.54 |
-
-*Q8 contains the final 11 weeks of training.
-
-### Observations
-
-* Profit Factor increased from approximately **1.10** during the earliest training period to **1.4–1.8** in the later periods.
-* Average weekly drawdown remained relatively stable between **7R and 10R** despite substantially higher returns.
-* Recovery Factor improved significantly over time, indicating that profitability increased faster than drawdown.
-* The strongest performance occurred during the final two quarters while maintaining comparable risk characteristics.
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
@@ -127,45 +149,214 @@ Training period: **~June 2024 – June 1, 2026** (102 rolling weekly training wi
 
 - Python 3.11+
 - MetaTrader 5
-- MetaTrader5
-- pandas
-- numpy
-- torch
 
-Install dependencies:
+Python packages:
 
-```bash
-pip install MetaTrader5 pandas numpy torch
+```
+torch
+stable-baselines3
+sb3-contrib
+gymnasium
+MetaTrader5
+numpy
+pandas
+scikit-learn
+ta
+xlstm
 ```
 
 ---
 
-## Running
+## Historical Data
 
-Train:
+Place historical data inside the `download/` folder.
+
+Example:
+
+```
+download/
+└── xauusd-m5-bid-2023-01-01-2026-06-01.csv
+```
+
+The bot automatically calculates all technical indicators and Smart Money Concept features before training.
+
+---
+
+## Training
+
+Train the reinforcement learning model:
 
 ```bash
 python bot.py --train
 ```
 
-Live trading:
+Training automatically:
+
+- Loads historical data
+- Calculates technical indicators
+- Builds SMC features
+- Normalizes inputs
+- Creates the trading environment
+- Trains the PPO agent
+- Saves the trained model
+
+---
+
+## Live Trading
+
+Run the live trading bot:
 
 ```bash
-python bot.py --test --symbol "XAUUSD"
+python bot.py --test
 ```
 
-Train and trade simultaneously:
+The bot will:
 
-```bash
-python mt5-xau-lstm-ppo-bot.py --train --test
+- Connect to MetaTrader 5
+- Read live candles
+- Generate feature vectors
+- Predict actions
+- Execute trades
+- Manage open positions automatically
+
+---
+
+## Feature List
+
+Current feature set includes:
+
+```
+k
+k_smooth
+adx
++di
+-di
+EMA721_DIFF
+EMA7_Slope
+EMA21_Slope
+indecision
+
+bullish_ob
+bearish_ob
+bullish_fvg
+bearish_fvg
+bullish_ifvg
+bearish_ifvg
+
+eqh
+eql
+
+bullish_mb
+bearish_mb
+
+bullish_rb
+bearish_rb
+
+bullish_bb
+bearish_bb
+
+bullish_mss
+bearish_mss
+
+bullish_ob_mitigation
+bearish_ob_mitigation
+
+bullish_fvg_retracement
+bearish_fvg_retracement
+
+bullish
+bearish
+
+above_vwap
+below_vwap
+
+pdh
+pdl
+
+asia_high
+asia_low
+
+pdh_distance
+pdl_distance
+
+asia_high_distance
+asia_low_distance
+
+vwap
+vwap_upper
+vwap_lower
+
+bullish_ifvg_retracement
+bearish_ifvg_retracement
+
+swing_high
+swing_low
+
+support_trend_line
+resistance_trend_line
+
+seq_len
+session
 ```
 
-To train download a m5 xauusd csv file form kaggle or dukascopy and place the folder in "download" relative to the directory the mt5-xau-lstm-ppo-bot.py is in.
+---
+
+## Risk Management
+
+Supports:
+
+- Fixed percentage risk
+- Dynamic lot sizing
+- Adaptive stop losses
+- Adaptive take profits
+- Partial exits
+- Break-even protection
+- Maximum open positions
+
+---
+
+## Training Statistics
+
+The bot reports:
+
+- Win Rate
+- Profit Factor
+- Sharpe Ratio
+- Sortino Ratio
+- Weekly Return
+- Maximum Drawdown
+- Mean Win
+- Mean Loss
+- Average R
+- Trade Count
+
+---
+
+## Roadmap
+
+- [ ] Multi-symbol training
+- [ ] Multi-timeframe observations
+- [ ] Prioritized Experience Replay
+- [ ] Hyperparameter optimization
+- [ ] Walk-forward validation
+- [ ] ONNX export
+- [ ] Transformer/xLSTM hybrid policy
+- [ ] Trade visualization dashboard
+- [ ] Pattern similarity search
+- [ ] Explainable AI trade analysis
 
 ---
 
 ## Disclaimer
 
-This project is for educational and research purposes only.
+This project is intended for educational and research purposes only.
 
-Trading leveraged products involves substantial risk. Always test thoroughly on historical data and demo accounts before risking real capital.
+Trading financial markets involves substantial risk. Past performance does not guarantee future results.
+
+Always test on a demo account before trading with real funds.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
